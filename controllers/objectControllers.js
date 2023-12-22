@@ -92,4 +92,5 @@ const registerPlace = asyncHandler(async (req, res) => {
   }
 });
 
+function speech_openAI_text() {}
 module.exports = { fetchDescription, registerPlace };
