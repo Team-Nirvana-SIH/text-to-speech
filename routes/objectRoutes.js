@@ -1,13 +1,14 @@
 const asyncHandler = require("express-async-handler");
 const express = require("express");
 const router = express.Router();
+const googleTranslate = require('../translate');
 const {
   fetchDescription,
   registerPlace,
   // translateText,
   // startSpeechRecognition,
 } = require("../controllers/objectControllers");
-const translate = require("google-translate-api");
+//const translate = require("google-translate-api");
 
 // sampleTextToBeConvertedIntoTamil =
 //   "As you explore the vibrant city of Chennai, nestled in Tamil Nadu, India, the San Thome Church, also known as St. Thomas Cathedral Basilica, stands as a profound testament to history and faith. Erected in the Santhome neighborhood, this church holds deep-rooted significance within the Catholic Church in India.";
@@ -36,5 +37,6 @@ const translate = require("google-translate-api");
 // Generic /:id route should come after all specific routes
 router.get("/:id", asyncHandler(fetchDescription));
 router.post("/", asyncHandler(registerPlace));
-router.post("/translate", asyncHandler(translate));
+router.post('/translate', asyncHandler(googleTranslate));
+//router.post("/", asyncHandler(googleTranslate));
 module.exports = router;

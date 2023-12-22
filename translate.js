@@ -8,7 +8,8 @@ const googleTranslate = async (req, res) => {
     credentials = JSON.parse(process.env.CREDENTIALS);
   } catch (error) {
     console.error("Error parsing credentials:", error);
-    process.exit(1); // Exit if credentials cannot be parsed
+    res.status(500).send("Error parsing credentials"); // Send error response
+    return;
   }
 
   // Configuration for the client
@@ -22,18 +23,19 @@ const googleTranslate = async (req, res) => {
       let [response] = await translate.translate(text, targetLanguage);
       return response;
     } catch (error) {
-      console.log(`Error at translateText --> ${error}`);
-      return 0;
+      console.error(`Error at translateText --> ${error}`);
+      throw error; // Throw the error to be caught in the outer try-catch
     }
   };
 
-  translateText(req.body.text, req.body.lang)
-    .then((res) => {
-      console.log(res);
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+  try {
+    // Assuming req.body.text and req.body.lang are provided by OpenAI's API response
+    const translatedText = await translateText(req.body.text, req.body.lang);
+    res.send({ translatedText }); // Send back the translated text
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error during translation");
+  }
 };
 
-export default googleTranslate;
+module.exports = googleTranslate; // Export the function for use in an Express app

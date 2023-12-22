@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const { constants } = require("../helper/constants");
 const { exec } = require("child_process");
 const Object = require("../models/objectModels");
+//const { Translate } = require("@google-cloud/translate").v2;
 
 // Import Text-to-Speech only if it's being used
 const textToSpeech = require("@google-cloud/text-to-speech");
@@ -49,6 +50,12 @@ async function convertTextToMp3(newObject, res) {
   }
 }
 
+//translate
+
+
+
+//
+
 const fetchDescription = asyncHandler(async (req, res) => {
   try {
     const id = req.params.id;
@@ -91,6 +98,8 @@ const registerPlace = asyncHandler(async (req, res) => {
       .json({ message: "Error creating new object" });
   }
 });
+
+
 
 function speech_openAI_text() {}
 module.exports = { fetchDescription, registerPlace };
