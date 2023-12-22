@@ -1,13 +1,14 @@
 const asyncHandler = require("express-async-handler");
 const express = require("express");
 const router = express.Router();
-const googleTranslate = require('../translate');
+const googleTranslate = require("../translate");
 const {
   fetchDescription,
   registerPlace,
   // translateText,
   // startSpeechRecognition,
 } = require("../controllers/objectControllers");
+const textToSpeechAndPlay = require("../ttsMessage");
 //const translate = require("google-translate-api");
 
 // sampleTextToBeConvertedIntoTamil =
@@ -37,6 +38,7 @@ const {
 // Generic /:id route should come after all specific routes
 router.get("/:id", asyncHandler(fetchDescription));
 router.post("/", asyncHandler(registerPlace));
-router.post('/translate', asyncHandler(googleTranslate));
+router.post("/translate", asyncHandler(googleTranslate));
+router.post("/newTranslate", asyncHandler(textToSpeechAndPlay));
 //router.post("/", asyncHandler(googleTranslate));
 module.exports = router;
