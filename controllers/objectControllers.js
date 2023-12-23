@@ -52,8 +52,6 @@ async function convertTextToMp3(newObject, res) {
 
 //translate
 
-
-
 //
 
 const fetchDescription = asyncHandler(async (req, res) => {
@@ -98,8 +96,32 @@ const registerPlace = asyncHandler(async (req, res) => {
       .json({ message: "Error creating new object" });
   }
 });
+// --------------
+const { Configuration, OpenAIApi } = require("openai");
 
+async function speech_openAI_text(query) {
+  if (!query) {
+    throw new Error("No query provided");
+  }
 
+  const configuration = new Configuration({
+    apiKey: process.env.OPENAI_API_KEY, // Ensure your API key is set in environment variables
+  });
+  const openai = new OpenAIApi(configuration);
+
+  try {
+    const response = await openai.createCompletion({
+      model: "text-davinci-003", // or any other model
+      prompt: query,
+      max_tokens: 150,
+    });
+
+    return response.data.choices[0].text.trim();
+  } catch (error) {
+    console.error("Error fetching answer from OpenAI:", error);
+    throw error; // Re-throw the error for the caller to handle
+  }
+}
 
 function speech_openAI_text() {}
-module.exports = { fetchDescription, registerPlace };
+module.exports = { speech_openAI_text, fetchDescription, registerPlace };

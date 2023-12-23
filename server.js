@@ -1,22 +1,25 @@
-//Testing file
-const bodyParser = require("body-parser");
 const express = require("express");
-const connectDb = require("./config/dbConnection");
+const connectDb = require("./config/dbConnection"); // Only if you have a database connection
 const errorHandler = require("./middleware/errorHandler");
-const dotenv = require("dotenv").config();
+const objectRoutes = require("./routes/objectRoutes"); // Adjust the path as necessary
 
-
-connectDb();
+// Initialize Express app
 const app = express();
-const port = process.env.PORT || 5000;
+const port = 5000;
+
+// Connect to the database (if applicable)
+connectDb();
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-// app.use(bodyParser.json);
+// Use the defined routes
+app.use("/api/object", objectRoutes);
 
-// -------------------------------------------------
-
-app.use("/api/object", require("./routes/objectRoutes"));
+// Error handling middleware
 app.use(errorHandler);
-app.listen(port, () => {
-  console.log(`server is running on port ${port}...`);
+
+// Start the server
+app.listen(5000, () => {
+  console.log(`Server is running on port ${port}...`);
 });

@@ -1,44 +1,69 @@
-const speech = require('@google-cloud/speech');
-const record = require('node-record-lpcm16');
+const record = require("node-record-lpcm16");
 
-const client = new speech.SpeechClient();
+const fs = require("fs");
+const speech = require("@google-cloud/speech");
+const chatResponseApiCall = require("./chatResponseApiCall"); // Make sure the path is correct
 
-async function main() {
-    const request = {
-        config: {
-            encoding: 'LINEAR16',
-            sampleRateHertz: 16000,
-            languageCode: 'en-US',
-        },
-        interimResults: false, // If you want interim results, set this to true
-    };
+const speechClient = new speech.SpeechClient({
+  keyFilename: "../verdant-bulwark-408509-e5e9b224f85c.json", // Replace with your credentials file path
+});
 
-    const recognizeStream = client
-        .streamingRecognize(request)
-        .on('error', console.error)
-        .on('data', data =>
-            console.log(
-                `Transcription: ${data.results[0] && data.results[0].alternatives[0]
-                    ? data.results[0].alternatives[0].transcript
-                    : 'Unable to transcribe'}`
-            )
-        );
+const RECORD_TIME_MS = 5000; // Record for 5 seconds
+const AUDIO_FILE = "recorded_audio.wav";
 
-    // Start recording and send the microphone input to the Speech API
-    record
-        .record({
-            sampleRateHertz: 16000,
-            threshold: 0,
-            // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
-            verbose: false,
-            recordProgram: 'rec', // Try also "arecord" or "sox"
-            silence: '10.0',
-        })
-        .stream()
-        .on('error', console.error)
-        .pipe(recognizeStream);
+async function recordAudio() {
+  console.log("Recording started...");
+  const file = fs.createWriteStream(AUDIO_FILE, { encoding: "binary" });
 
-    console.log('Listening, press Ctrl+C to stop.');
+  record
+    .start({
+      sampleRateHertz: 16000,
+      threshold: 0,
+      verbose: false,
+      recordProgram: "rec", // or 'arecord' or 'sox'
+      silence: "10.0",
+    })
+    .pipe(file);
+
+  setTimeout(() => {
+    record.stop();
+    console.log("Recording stopped.");
+    transcribeAndSend();
+  }, RECORD_TIME_MS);
 }
 
-main().catch(console.error);
+async function transcribeAndSend() {
+  const file = fs.readFileSync(AUDIO_FILE);
+  const audioBytes = file.toString("base64");
+
+  const request = {
+    audio: { content: audioBytes },
+    config: {
+      encoding: "LINEAR16",
+      sampleRateHertz: 16000,
+      languageCode: "en-US",
+    },
+  };
+
+  try {
+    const [response] = await speechClient.recognize(request);
+    const transcription = response.results
+      .map((result) => result.alternatives[0].transcript)
+      .join("\n");
+    console.log(`Transcription: ${transcription}`);
+    sendTranscriptionToChatApi(transcription);
+  } catch (err) {
+    console.error("Error transcribing audio:", err);
+  }
+}
+
+async function sendTranscriptionToChatApi(transcription) {
+  try {
+    const response = await chatResponseApiCall(transcription);
+    console.log("Response from chat API:", response);
+  } catch (error) {
+    console.error("Error sending transcription to chat API:", error);
+  }
+}
+
+recordAudio();

@@ -2,43 +2,51 @@ const asyncHandler = require("express-async-handler");
 const express = require("express");
 const router = express.Router();
 const googleTranslate = require("../translate");
+const chatResponseApiCall = require("../chatResponseApiCall");
+// const textToSpeech = require("../ttsMessage");
+const textToSpeechAndPlay = require("../ttsMessage");
 const {
   fetchDescription,
   registerPlace,
-  // translateText,
-  // startSpeechRecognition,
 } = require("../controllers/objectControllers");
-const textToSpeechAndPlay = require("../ttsMessage");
-//const translate = require("google-translate-api");
+// const textToSpeechAndPlay = require("../ttsMessage");
 
-// sampleTextToBeConvertedIntoTamil =
-//   "As you explore the vibrant city of Chennai, nestled in Tamil Nadu, India, the San Thome Church, also known as St. Thomas Cathedral Basilica, stands as a profound testament to history and faith. Erected in the Santhome neighborhood, this church holds deep-rooted significance within the Catholic Church in India.";
-// Function to translate text
-// Function to handle the translation request
-
-// async function translateAndSpeak(req, res) {
-//   try {
-//     // Use a query parameter or route parameter to get the text
-//     const text = req.query.text || sampleTextToBeConvertedIntoTamil;
-
-//     const translatedText = await translateText(text);
-//     res.json({ translatedText });
-//   } catch (err) {
-//     console.error("Translation error:", err);
-//     res.status(500).json({ error: "Translation failed" });
-//   }
-// }
-
-// // Place specific routes before the generic /:id route
-// router.get("/translate", asyncHandler(translateAndSpeak));
-
-// Other specific routes...
-// router.get("/speech-recognition", asyncHandler(startSpeechRecognition));
-
-// Generic /:id route should come after all specific routes
 router.get("/:id", asyncHandler(fetchDescription));
-router.post("/", asyncHandler(registerPlace));
-router.post("/translate", asyncHandler(googleTranslate));
-router.post("/newTranslate", asyncHandler(textToSpeechAndPlay));
-//router.post("/", asyncHandler(googleTranslate));
+router.post("/", asyncHandler(registerPlace)); // for testing
+// router.post("/translate", asyncHandler(googleTranslate));
+router.post(
+  "/openAI",
+  asyncHandler(async (req, res) => {
+    try {
+      const prompt = req.body.prompt; // Get the prompt from the request body
+      const response = await chatResponseApiCall(prompt); // Call the function with the prompt
+      res.json(response); // Send back the response
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: "Error processing request", details: error.message });
+    }
+  })
+);
+router.post("/convert-and-play", async (req, res) => {
+  try {
+    await textToSpeechAndPlay(req.body.text);
+    res.send("Played successfully");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+// router.post(
+//   "/openai-query",
+//   asyncHandler(async (req, res) => {
+//     try {
+//       const query = req.body.query;
+//       const answer = await speech_openAI_text(query);
+//       res.json({ answer });
+//     } catch (error) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   })
+// );
+
 module.exports = router;

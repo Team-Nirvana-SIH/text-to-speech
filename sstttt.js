@@ -1,30 +1,68 @@
-const puppeteer = require('puppeteer');
+const speech = require("@google-cloud/speech");
+const record = require("node-record-lpcm16");
+const chatResponseApiCall = require("./path/to/chatResponseApiCall"); // Make sure to use the correct path
 
-async function runSpeechRecognition() {
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+const googleCloudConfig = {
+  projectId: "verdant-bulwark-408509", // Replace with your project ID
+  keyFilename: "./verdant-bulwark-408509-e5e9b224f85c.json", // Replace with the path to your key file
+};
 
-    // Function to be evaluated in the browser context
-    const speechRecognitionFunction = () => {
-        return new Promise((resolve, reject) => {
-            const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.onresult = (event) => resolve(event.results[0][0].transcript);
-            recognition.onerror = (event) => reject(event.error);
-            recognition.start();
-        });
-    };
+const client = new speech.SpeechClient(googleCloudConfig);
 
-    try {
-        // Run the speech recognition function in the headless browser
-        const result = await page.evaluate(speechRecognitionFunction);
-        console.log(`Transcribed Text: ${result}`);
-    } catch (error) {
-        console.error(`Speech recognition error: ${error}`);
-    } finally {
-        await browser.close();
-    }
+async function transcribeFromMicrophone() {
+  const request = {
+    config: {
+      encoding: "LINEAR16",
+      sampleRateHertz: 16000,
+      languageCode: "en-IN",
+    },
+    interimResults: false,
+  };
+
+  return new Promise((resolve, reject) => {
+    let finalTranscript = "";
+    const recognizeStream = client
+      .streamingRecognize(request)
+      .on("error", (error) => {
+        console.error("Error in recognizeStream:", error);
+        reject(error);
+      })
+      .on("data", (data) => {
+        if (data.results[0] && data.results[0].alternatives[0]) {
+          finalTranscript += data.results[0].alternatives[0].transcript + "\n";
+        }
+      });
+
+    const recording = record
+      .record({
+        sampleRateHertz: 16000,
+        threshold: 0,
+        recordProgram: "rec", // Try 'arecord' or 'sox' if 'rec' doesn't work
+        silence: "10.0",
+      })
+      .stream()
+      .on("error", (error) => {
+        console.error("Error in recording stream:", error);
+        reject(error);
+      })
+      .pipe(recognizeStream);
+
+    console.log("Listening, press Ctrl+C to stop.");
+
+    setTimeout(async () => {
+      recording.unpipe();
+      record.stop();
+
+      try {
+        const response = await chatResponseApiCall(finalTranscript);
+        console.log("Chat response received:", response);
+        resolve(response);
+      } catch (error) {
+        console.error("Error in chat response:", error);
+        reject(error);
+      }
+    }, 5000); // Duration of recording in milliseconds
+  });
 }
 
-runSpeechRecognition().catch(console.error);
+module.exports = transcribeFromMicrophone;
