@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const googleTranslate = require("../translate");
 const chatResponseApiCall = require("../chatResponseApiCall");
-// const textToSpeech = require("../ttsMessage");
+const textToSpeech = require("../ttsMessage");
 const textToSpeechAndPlay = require("../ttsMessage");
 const {
   fetchDescription,

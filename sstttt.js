@@ -1,68 +1,50 @@
 const speech = require("@google-cloud/speech");
 const record = require("node-record-lpcm16");
-const chatResponseApiCall = require("./path/to/chatResponseApiCall"); // Make sure to use the correct path
 
+const client = new speech.SpeechClient();
 const googleCloudConfig = {
   projectId: "verdant-bulwark-408509", // Replace with your project ID
-  keyFilename: "./verdant-bulwark-408509-e5e9b224f85c.json", // Replace with the path to your key file
+  keyFilename: "./verdant-bulwark-408509-e5e9b224f85c.json", // Replace with the path to your key file
 };
 
-const client = new speech.SpeechClient(googleCloudConfig);
-
-async function transcribeFromMicrophone() {
+async function main() {
   const request = {
     config: {
       encoding: "LINEAR16",
       sampleRateHertz: 16000,
-      languageCode: "en-IN",
+      languageCode: "en-US",
     },
-    interimResults: false,
+    interimResults: false, // If you want interim results, set this to true
   };
 
-  return new Promise((resolve, reject) => {
-    let finalTranscript = "";
-    const recognizeStream = client
-      .streamingRecognize(request)
-      .on("error", (error) => {
-        console.error("Error in recognizeStream:", error);
-        reject(error);
-      })
-      .on("data", (data) => {
-        if (data.results[0] && data.results[0].alternatives[0]) {
-          finalTranscript += data.results[0].alternatives[0].transcript + "\n";
-        }
-      });
+  const recognizeStream = client
+    .streamingRecognize(request)
+    .on("error", console.error)
+    .on("data", (data) =>
+      console.log(
+        `Transcription: ${
+          data.results[0] && data.results[0].alternatives[0]
+            ? data.results[0].alternatives[0].transcript
+            : "Unable to transcribe"
+        }`
+      )
+    );
 
-    const recording = record
-      .record({
-        sampleRateHertz: 16000,
-        threshold: 0,
-        recordProgram: "rec", // Try 'arecord' or 'sox' if 'rec' doesn't work
-        silence: "10.0",
-      })
-      .stream()
-      .on("error", (error) => {
-        console.error("Error in recording stream:", error);
-        reject(error);
-      })
-      .pipe(recognizeStream);
+  // Start recording and send the microphone input to the Speech API
+  record
+    .record({
+      sampleRateHertz: 16000,
+      threshold: 0,
+      // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+      verbose: false,
+      recordProgram: "rec", // Try also "arecord" or "sox"
+      silence: "10.0",
+    })
+    .stream()
+    .on("error", console.error)
+    .pipe(recognizeStream);
 
-    console.log("Listening, press Ctrl+C to stop.");
-
-    setTimeout(async () => {
-      recording.unpipe();
-      record.stop();
-
-      try {
-        const response = await chatResponseApiCall(finalTranscript);
-        console.log("Chat response received:", response);
-        resolve(response);
-      } catch (error) {
-        console.error("Error in chat response:", error);
-        reject(error);
-      }
-    }, 5000); // Duration of recording in milliseconds
-  });
+  console.log("Listening, press Ctrl+C to stop.");
 }
 
-module.exports = transcribeFromMicrophone;
+main().catch(console.error);
